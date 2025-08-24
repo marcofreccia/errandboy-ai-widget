@@ -57,4 +57,48 @@ document.getElementById('sonar-send-btn').onclick = function() {
 document.getElementById('sonar-q').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') askSonar();
 });
+// === TRACKING EVENTI WIDGET AI SONAR ===
+// Funzioni di tracking per monitorare l'uso del widget
 
+function trackWidgetEvent(eventName, eventData = {}) {
+    // Verifica se le funzioni di tracking sono disponibili (caricate da Ecwid)
+    if (typeof window.trackWidgetOpen === 'function' || 
+        typeof window.trackWidgetMessage === 'function' || 
+        typeof window.trackWidgetClose === 'function') {
+        
+        switch(eventName) {
+            case 'widget_opened':
+                if (window.trackWidgetOpen) window.trackWidgetOpen();
+                break;
+            case 'message_sent':
+                if (window.trackWidgetMessage) window.trackWidgetMessage(eventData.length || 0);
+                break;
+            case 'widget_closed':
+                if (window.trackWidgetClose) window.trackWidgetClose();
+                break;
+        }
+    }
+    
+    // Log per debug (visibile nella console del browser)
+    console.log('🎯 Widget Event:', eventName, eventData);
+}
+
+// Modifica la funzione che apre il widget (cerca la funzione esistente e aggiungi la riga di tracking)
+// Esempio: quando il FAB viene cliccato
+document.addEventListener('DOMContentLoaded', function() {
+    const fabButton = document.getElementById('sonar-fab');
+    if (fabButton) {
+        fabButton.addEventListener('click', function() {
+            trackWidgetEvent('widget_opened');
+        });
+    }
+    
+    // Tracking quando viene inviato un messaggio
+    const sendButton = document.querySelector('[onclick*="askSonar"]');
+    if (sendButton) {
+        sendButton.addEventListener('click', function() {
+            const question = document.getElementById('sonar-q').value;
+            trackWidgetEvent('message_sent', { length: question.length });
+        });
+    }
+});
