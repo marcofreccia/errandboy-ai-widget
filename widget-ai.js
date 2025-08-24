@@ -1,15 +1,25 @@
+// === WIDGET AI SONAR - EVENTI PRINCIPALI ===
 document.getElementById('sonar-fab').onclick = function() {
   document.getElementById('sonar-chat').style.display = 'block';
   this.style.display = 'none';
+  // ✅ TRACKING: Widget aperto
+  trackWidgetEvent('widget_opened');
 };
+
 document.querySelector('#sonar-chat .close-chat').onclick = function() {
   document.getElementById('sonar-chat').style.display = 'none';
   document.getElementById('sonar-fab').style.display = 'flex';
+  // ✅ TRACKING: Widget chiuso
+  trackWidgetEvent('widget_closed');
 };
 
 async function askSonar(model = "sonar-pro") {
   const question = document.getElementById('sonar-q').value.trim();
   if (!question) return;
+  
+  // ✅ TRACKING: Messaggio inviato
+  trackWidgetEvent('message_sent', { length: question.length });
+  
   document.getElementById('sonar-reply').innerText = '⏳ The AI is responding... Please wait.';
 
   const prompt = `
@@ -35,6 +45,53 @@ Never use references or citations like [1],[1].
         messages: [{ role: "user", content: userPrompt }]
       })
     });
+    if (!res.ok) {
+      if (model === 'sonar-pro') return askSonar('sonar');
+      throw new Error('API error: ' + res.status);
+    }
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content || 'No reply or error.';
+    document.getElementById('sonar-reply').innerText = reply;
+
+    // Scroll chat in basso per vedere nuova risposta e input
+    const chatBox = document.getElementById('sonar-chat');
+    chatBox.scrollTop = chatBox.scrollHeight;
+  } catch (e) {
+    document.getElementById('sonar-reply').innerText = 'Chat temporarily unavailable (' + e.message + '). Try later.';
+  }
+}
+
+document.getElementById('sonar-send-btn').onclick = function() {
+  askSonar();
+};
+
+document.getElementById('sonar-q').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') askSonar();
+});
+
+// === TRACKING EVENTI WIDGET AI SONAR ===
+function trackWidgetEvent(eventName, eventData = {}) {
+    // Verifica se le funzioni di tracking sono disponibili (caricate da Ecwid)
+    if (typeof window.trackWidgetOpen === 'function' || 
+        typeof window.trackWidgetMessage === 'function' || 
+        typeof window.trackWidgetClose === 'function') {
+        
+        switch(eventName) {
+            case 'widget_opened':
+                if (window.trackWidgetOpen) window.trackWidgetOpen();
+                break;
+            case 'message_sent':
+                if (window.trackWidgetMessage) window.trackWidgetMessage(eventData.length || 0);
+                break;
+            case 'widget_closed':
+                if (window.trackWidgetClose) window.trackWidgetClose();
+                break;
+        }
+    }
+    
+    // Log per debug (visibile nella console del browser)
+    console.log('🎯 Widget Event:', eventName, eventData);
+}    });
     if (!res.ok) {
       if (model === 'sonar-pro') return askSonar('sonar');
       throw new Error('API error: ' + res.status);
