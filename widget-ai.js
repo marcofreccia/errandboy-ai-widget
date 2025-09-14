@@ -1,25 +1,38 @@
-// === WIDGET SONAR AI MULTILINGUA — LINK SEARCH SEMPRE VISIBILE, FUNZIONA OVUNQUE ===
+// === WIDGET SONAR AI MULTILINGUA — PATCH PER ECWID SPA ===
 
 function $(id) { return document.getElementById(id); }
 
-// Pulsante flottante apertura
-if ($('sonar-fab')) {
-  $('sonar-fab').onclick = function() {
-    if ($('sonar-chat')) $('sonar-chat').style.display = 'block';
-    this.style.display = 'none';
-    trackWidgetEvent('widget_opened');
-  };
+function initSonarWidgetListeners() {
+  if (typeof askSonar === "function" && $('sonar-send-btn')) {
+    $('sonar-send-btn').onclick = function() { askSonar(); };
+  }
+  if ($('sonar-q')) {
+    $('sonar-q').onkeydown = function(e) {
+      if (e.key === 'Enter') askSonar();
+    };
+  }
+  if ($('sonar-fab')) {
+    $('sonar-fab').onclick = function() {
+      if ($('sonar-chat')) $('sonar-chat').style.display = 'block';
+      this.style.display = 'none';
+      if (typeof trackWidgetEvent === "function") trackWidgetEvent('widget_opened');
+    };
+  }
+  if (document.querySelector('#sonar-chat .close-chat')) {
+    document.querySelector('#sonar-chat .close-chat').onclick = function() {
+      if ($('sonar-chat')) $('sonar-chat').style.display = 'none';
+      if ($('sonar-fab')) $('sonar-fab').style.display = 'flex';
+      if (typeof trackWidgetEvent === "function") trackWidgetEvent('widget_closed');
+    };
+  }
 }
 
-// Tasto chiusura chat
-if (document.querySelector('#sonar-chat .close-chat')) {
-  document.querySelector('#sonar-chat .close-chat').onclick = function() {
-    if ($('sonar-chat')) $('sonar-chat').style.display = 'none';
-    if ($('sonar-fab')) $('sonar-fab').style.display = 'flex';
-    trackWidgetEvent('widget_closed');
-  };
-}
+initSonarWidgetListeners();
+document.addEventListener('ecwidOnPageLoaded', function() {
+  setTimeout(initSonarWidgetListeners, 100);
+});
 
+// === ASK SONAR: risposta AI multilingua + link search diretti ===
 async function askSonar(model = "sonar-pro") {
   if (!$('sonar-q') || !$('sonar-reply')) return;
   const question = $('sonar-q').value.trim();
@@ -45,12 +58,9 @@ async function askSonar(model = "sonar-pro") {
     } else if (data.total > 1) {
       replyType = "multi";
     }
-  } catch (e) {
-    // fallback: replyType resta ""
-  }
+  } catch (e) {}
 
   let prompt = "";
-
   if (replyType === "product") {
     prompt = `
 You are Errand Boy Malta's shopping assistant. Always reply ONLY in the user's language.
@@ -68,10 +78,10 @@ If the user reports zero results or is unhappy, encourage them to contact suppor
 Never show citations or references like [1] or [2]. Only clear text and the link.
     `;
   }
-
   await callSonarAndShow(question, prompt);
 }
 
+// === Chiamata AI + output in chat ===
 async function callSonarAndShow(userQuestion, contextPrompt) {
   if (!$('sonar-reply')) return;
   $('sonar-reply').innerText = '⏳ AI is replying...';
@@ -100,21 +110,7 @@ async function callSonarAndShow(userQuestion, contextPrompt) {
   }
 }
 
-// Pulsante "Send"
-if ($('sonar-send-btn')) {
-  $('sonar-send-btn').onclick = function() {
-    askSonar();
-  };
-}
-
-// Invio tramite Enter
-if ($('sonar-q')) {
-  $('sonar-q').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') askSonar();
-  });
-}
-
-// Tracking eventi widget
+// === TRACKING EVENTI WIDGET (opzionale) ===
 function trackWidgetEvent(eventName, eventData = {}) {
   if (
     typeof window.trackWidgetOpen === 'function' ||
