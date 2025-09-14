@@ -1,27 +1,35 @@
 // === WIDGET SONAR AI MULTILINGUA — LINK SEARCH SEMPRE PRESENTE ===
 
-document.getElementById('sonar-fab').onclick = function() {
-  document.getElementById('sonar-chat').style.display = 'block';
-  this.style.display = 'none';
-  trackWidgetEvent('widget_opened');
-};
+function $(id) {
+  return document.getElementById(id);
+}
 
-document.querySelector('#sonar-chat .close-chat').onclick = function() {
-  document.getElementById('sonar-chat').style.display = 'none';
-  document.getElementById('sonar-fab').style.display = 'flex';
-  trackWidgetEvent('widget_closed');
-};
+if ($('sonar-fab')) {
+  $('sonar-fab').onclick = function() {
+    if ($('sonar-chat')) $('sonar-chat').style.display = 'block';
+    this.style.display = 'none';
+    trackWidgetEvent('widget_opened');
+  };
+}
+
+if (document.querySelector('#sonar-chat .close-chat')) {
+  document.querySelector('#sonar-chat .close-chat').onclick = function() {
+    if ($('sonar-chat')) $('sonar-chat').style.display = 'none';
+    if ($('sonar-fab')) $('sonar-fab').style.display = 'flex';
+    trackWidgetEvent('widget_closed');
+  };
+}
 
 async function askSonar(model = "sonar-pro") {
-  const question = document.getElementById('sonar-q').value.trim();
+  if (!$('sonar-q') || !$('sonar-reply')) return;
+  const question = $('sonar-q').value.trim();
   if (!question) return;
-  document.getElementById('sonar-reply').innerText = '⏳ Loading...';
+  $('sonar-reply').innerText = '⏳ Loading...';
 
-  // Chiamata API prodotti Ecwid
   const storeId = '29517085';
   const token = 'public_AzqkPnjmEbKiDr3bSWKeC1YrrNh1BfBY';
   const apiURL = `https://app.ecwid.com/api/v3/${storeId}/products?keyword=${encodeURIComponent(question)}&token=${token}`;
-  
+
   let replyType = "";
   let productLink = "";
   let productName = "";
@@ -39,7 +47,7 @@ async function askSonar(model = "sonar-pro") {
       replyType = "multi";
     }
   } catch (e) {
-    // fallback: replyType resta ""
+    // fallback
   }
 
   let prompt = "";
@@ -53,7 +61,6 @@ Give a clear confirmation and provide ONLY the clickable product link: <a href="
 Optionally, if helpful, you may add info from the web after the link.
     `;
   } else {
-    // MULTI or ZERO: mostra sempre il search link reale
     prompt = `
 You are Errand Boy Malta's shopping assistant. Always reply ONLY in the user's language.
 The customer searched for: "${question}".
@@ -66,7 +73,8 @@ If nothing is found, invite them to contact support via <a href="https://wa.me/3
 }
 
 async function callSonarAndShow(userQuestion, contextPrompt) {
-  document.getElementById('sonar-reply').innerText = '⏳ AI is replying...';
+  if (!$('sonar-reply')) return;
+  $('sonar-reply').innerText = '⏳ AI is replying...';
   try {
     const res = await fetch("https://restless-salad-b1bf.wild-darkness-f8cd.workers.dev/", {
       method: "POST",
@@ -82,23 +90,26 @@ async function callSonarAndShow(userQuestion, contextPrompt) {
     if (res.ok) {
       const data = await res.json();
       let reply = data.choices?.[0]?.message?.content || '';
-      document.getElementById('sonar-reply').innerHTML = reply;
-      const chatBox = document.getElementById('sonar-chat');
-      if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+      $('sonar-reply').innerHTML = reply;
+      if ($('sonar-chat')) $('sonar-chat').scrollTop = $('sonar-chat').scrollHeight;
       return;
     }
     throw new Error('AI error');
   } catch (e) {
-    document.getElementById('sonar-reply').innerText = 'Chat temporarily unavailable. Try later.';
+    $('sonar-reply').innerText = 'Chat temporarily unavailable. Try later.';
   }
 }
 
-document.getElementById('sonar-send-btn').onclick = function() {
-  askSonar();
-};
-document.getElementById('sonar-q').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') askSonar();
-};
+if ($('sonar-send-btn')) {
+  $('sonar-send-btn').onclick = function() {
+    askSonar();
+  };
+}
+if ($('sonar-q')) {
+  $('sonar-q').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') askSonar();
+  });
+}
 
 function trackWidgetEvent(eventName, eventData = {}) {
   if (
