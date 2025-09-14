@@ -1,113 +1,108 @@
-// === WIDGET AI SONAR - EVENTI PRINCIPALI ===
+// === WIDGET AI SONAR MULTILINGUA - RISPOSTA COMPLETA E PROFESSIONALE ===
+
+// Evento apertura
 document.getElementById('sonar-fab').onclick = function() {
   document.getElementById('sonar-chat').style.display = 'block';
   this.style.display = 'none';
   trackWidgetEvent('widget_opened');
 };
 
+// Evento chiusura
 document.querySelector('#sonar-chat .close-chat').onclick = function() {
   document.getElementById('sonar-chat').style.display = 'none';
   document.getElementById('sonar-fab').style.display = 'flex';
   trackWidgetEvent('widget_closed');
 };
 
-// --- FUNZIONI AGGIUNTIVE ---
-function getFonteBrandString(product_brand) {
-  if (product_brand && product_brand.trim() !== "") {
-    return `Secondo quanto riportato dal sito ufficiale ${product_brand} e da recensioni online,`;
-  } else {
-    return "Secondo quanto riportato dal sito ufficiale del produttore e da recensioni online,";
-  }
-}
-
-function isOvenInfoPresent(product_description) {
-  const testo = (product_description || "").toLowerCase();
-  return testo.includes('forno') || testo.includes('oven') || testo.includes('cottura in forno') || testo.includes('oven safe');
-}
-
-// --- FUNZIONE LOGICA PRODOTTI/CATEGORIE ---
-async function getProductLinkOrCategory(keyword) {
-  const storeId = '29517085';
-  const token = 'public_AzqkPnjmEbKiDr3bSWKeC1YrrNh1BfBY';
-  const apiURL = `https://app.ecwid.com/api/v3/${storeId}/products?keyword=${encodeURIComponent(keyword)}&token=${token}`;
-  const res = await fetch(apiURL, { method: 'GET' });
-  const data = await res.json();
-  if (data.total === 1) {
-    const item = data.items[0];
-    return {
-      type: 'product',
-      name: item.name,
-      url: item.url,
-      product_brand: (item.attributes && item.attributes.find(a => a.name.toLowerCase() === "brand")) ? item.attributes.find(a => a.name.toLowerCase() === "brand").value : (item.product_brand || ""),
-      product_description: item.description || item.product_description || ""
-    };
-  } else if (data.total > 1) {
-    return {
-      type: 'category',
-      url: `https://errandboy.store/search?q=${encodeURIComponent(keyword)}`,
-      keyword: keyword
-    };
-  } else {
-    return {
-      type: 'none'
-    };
-  }
-}
-
-// --- FUNZIONE PRINCIPALE DI RISPOSTA ---
+// === FUNZIONE AI PRINCIPALE ===
 async function askSonar(model = "sonar-pro") {
   const question = document.getElementById('sonar-q').value.trim();
   if (!question) return;
-  trackWidgetEvent('message_sent', { length: question.length });
-  document.getElementById('sonar-reply').innerHTML = '⏳ Sto cercando... Attendi.';
+  document.getElementById('sonar-reply').innerText = '⏳ Loading...';
 
-  let keyword = question;
+  // Ricerca prodotti su Ecwid
+  const storeId = '29517085';
+  const token = 'public_AzqkPnjmEbKiDr3bSWKeC1YrrNh1BfBY';
+  const apiURL = `https://app.ecwid.com/api/v3/${storeId}/products?keyword=${encodeURIComponent(question)}&token=${token}`;
+  
+  try {
+    const res = await fetch(apiURL, { method: 'GET' });
+    const data = await res.json();
 
-  // Chiamata API Ecwid
-  const result = await getProductLinkOrCategory(keyword);
-
-  let reply = '';
-  if (result.type === 'product') {
-    let product_brand = result.product_brand || "";
-    let product_description = result.product_description || "";
-
-    if (isOvenInfoPresent(product_description)) {
-      reply = `
-        <b>Abbiamo trovato 1 prodotto:</b><br>
-        ${result.name}<br>
-        <a href="${result.url}" target="_blank">Vedi il prodotto</a><br><br>
-        ${product_description}
+    // UN solo prodotto: link diretto + risposta AI + info extra se vuoi
+    if (data.total === 1) {
+      const item = data.items[0];
+      const productLink = item.url;
+      const name = item.name;
+      const prompt = `
+Always answer in the same language as the user's question.
+You are a professional shopping assistant for Errand Boy Malta.
+You found exactly one matching product for the user's search.
+Reply with: a clear confirmation, the clickable product link: <a href="${productLink}" target="_blank">${name}</a>, and, if helpful, online info about product compatibility or usage.
+If you find trusted info online, append it after the link, but keep the message synthetic.
       `;
-    } else {
-      // Qui puoi integrare con Perplexity, per ora esempio simulato
-      let infoOnline = "il prodotto è adatto all’uso in forno fino a 230°C."; // <-- Da sostituire con risposta online se vuoi
-      let fonte = getFonteBrandString(product_brand);
-      reply = `
-        <b>Abbiamo trovato 1 prodotto:</b><br>
-        ${result.name}<br>
-        <a href="${result.url}" target="_blank">Vedi il prodotto</a><br><br>
-        ${fonte} ${infoOnline}
-      `;
+      return await callSonarAndShow(question, prompt);
     }
-  } else if (result.type === 'category') {
-    reply = `
-      <b>Abbiamo trovato diversi articoli per la tua ricerca:</b><br>
-      <a href="${result.url}" target="_blank">Vedi tutti i risultati relativi a "${result.keyword}"</a>
-    `;
-  } else {
-    reply =
-      `Nessun prodotto trovato per la tua richiesta.<br>
-Può darsi che il prodotto non sia disponibile oppure che la parola cercata non corrisponda esattamente.<br>
-Ti invito ad usare la funzione di ricerca 🔍 e a provare con un altro termine.<br><br>
-📲 Oppure <b>contattaci subito</b> via <a href="https://wa.me/35677082474" target="_blank">WhatsApp</a> o SMS al numero <a href="tel:+35677082474">+35677082474</a> per assistenza rapida!
+
+    // PIÙ prodotti: link search/categoria
+    if (data.total > 1) {
+      const searchUrl = `https://errandboy.store/search?q=${encodeURIComponent(question)}`;
+      const prompt = `
+Always answer in the same language as the user's question.
+You are a professional shopping assistant for Errand Boy Malta.
+There are multiple products matching the user's search.
+Reply ONLY with: a concise confirmation, and a clickable link to see all results: <a href="${searchUrl}" target="_blank">See all results</a>.
+If needed, encourage the user to use the search icon for more precise find.
       `;
+      return await callSonarAndShow(question, prompt);
+    }
+
+    // NESSUN prodotto: invito AI a consigliare contatto WhatsApp/SMS
+    const prompt = `
+Always answer ONLY in the same language as the user's question.
+You are a professional shopping assistant for Errand Boy Malta.
+No products on our shop match the user's request.
+Kindly inform them: 
+- no product was found,
+- suggest they try with another search,
+- and invite them to contact support for quick help via WhatsApp or SMS.
+Insert this phrase in your answer (adapting it to the user's language):
+'Please contact us via WhatsApp or SMS at <a href="https://wa.me/35677082474" target="_blank">+35677082474</a> for fast support!'
+      `;
+    return await callSonarAndShow(question, prompt);
+  
+  } catch (e) {
+    document.getElementById('sonar-reply').innerText = 'Chat temporarily unavailable. Try later.';
   }
+}
 
-  document.getElementById('sonar-reply').innerHTML = reply;
-
-  // Scroll chat aggiornata
-  const chatBox = document.getElementById('sonar-chat');
-  chatBox.scrollTop = chatBox.scrollHeight;
+// FUNZIONE: chiamata Sonar AI e risposta con HTML (link attivi)
+async function callSonarAndShow(userQuestion, contextPrompt) {
+  document.getElementById('sonar-reply').innerText = '⏳ AI is replying...';
+  try {
+    const res = await fetch("https://restless-salad-b1bf.wild-darkness-f8cd.workers.dev/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "sonar-pro",
+        messages: [
+          { role: "system", content: contextPrompt },
+          { role: "user", content: userQuestion }
+        ]
+      })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      let reply = data.choices?.[0]?.message?.content || '';
+      document.getElementById('sonar-reply').innerHTML = reply;
+      const chatBox = document.getElementById('sonar-chat');
+      if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+      return;
+    }
+    throw new Error('AI error');
+  } catch (e) {
+    document.getElementById('sonar-reply').innerText = 'Chat temporarily unavailable. Try later.';
+  }
 }
 
 document.getElementById('sonar-send-btn').onclick = function() {
@@ -118,7 +113,7 @@ document.getElementById('sonar-q').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') askSonar();
 });
 
-// === TRACKING EVENTI WIDGET AI SONAR ===
+// === TRACKING EVENTI WIDGET ===
 function trackWidgetEvent(eventName, eventData = {}) {
   if (
     typeof window.trackWidgetOpen === 'function' ||
