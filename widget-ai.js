@@ -12,7 +12,6 @@ document.querySelector('#sonar-chat .close-chat').onclick = function() {
 };
 
 // --- FUNZIONI AGGIUNTIVE ---
-
 function getFonteBrandString(product_brand) {
   if (product_brand && product_brand.trim() !== "") {
     return `Secondo quanto riportato dal sito ufficiale ${product_brand} e da recensioni online,`;
@@ -22,7 +21,7 @@ function getFonteBrandString(product_brand) {
 }
 
 function isOvenInfoPresent(product_description) {
-  const testo = product_description.toLowerCase();
+  const testo = (product_description || "").toLowerCase();
   return testo.includes('forno') || testo.includes('oven') || testo.includes('cottura in forno') || testo.includes('oven safe');
 }
 
@@ -81,8 +80,8 @@ async function askSonar(model = "sonar-pro") {
         ${product_description}
       `;
     } else {
-      // Qui simuliamo risposta Perplexity, pronto per aggancio reale
-      let infoOnline = "il prodotto è adatto all’uso in forno fino a 230°C."; // <-- Da sostituire con risposta Perplexity reale se vuoi!
+      // Qui puoi integrare con Perplexity, per ora esempio simulato
+      let infoOnline = "il prodotto è adatto all’uso in forno fino a 230°C."; // <-- Da sostituire con risposta online se vuoi
       let fonte = getFonteBrandString(product_brand);
       reply = `
         <b>Abbiamo trovato 1 prodotto:</b><br>
@@ -91,6 +90,7 @@ async function askSonar(model = "sonar-pro") {
         ${fonte} ${infoOnline}
       `;
     }
+
   } else if (result.type === 'category') {
     reply = `
       <b>Abbiamo trovato diversi articoli per la tua ricerca:</b><br>
