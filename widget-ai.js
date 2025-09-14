@@ -1,133 +1,83 @@
-// === WIDGET SONAR AI MULTILINGUA — PATCH PER ECWID SPA ===
-
-function $(id) { return document.getElementById(id); }
-
-function initSonarWidgetListeners() {
-  if (typeof askSonar === "function" && $('sonar-send-btn')) {
-    $('sonar-send-btn').onclick = function() { askSonar(); };
-  }
-  if ($('sonar-q')) {
-    $('sonar-q').onkeydown = function(e) {
-      if (e.key === 'Enter') askSonar();
-    };
-  }
-  if ($('sonar-fab')) {
-    $('sonar-fab').onclick = function() {
-      if ($('sonar-chat')) $('sonar-chat').style.display = 'block';
-      this.style.display = 'none';
-      if (typeof trackWidgetEvent === "function") trackWidgetEvent('widget_opened');
-    };
-  }
-  if (document.querySelector('#sonar-chat .close-chat')) {
-    document.querySelector('#sonar-chat .close-chat').onclick = function() {
-      if ($('sonar-chat')) $('sonar-chat').style.display = 'none';
-      if ($('sonar-fab')) $('sonar-fab').style.display = 'flex';
-      if (typeof trackWidgetEvent === "function") trackWidgetEvent('widget_closed');
-    };
-  }
-}
-
-initSonarWidgetListeners();
-document.addEventListener('ecwidOnPageLoaded', function() {
-  setTimeout(initSonarWidgetListeners, 100);
-});
-
-// === ASK SONAR: risposta AI multilingua + link search diretti ===
+// === WIDGET AI SONAR - EVENTI PRINCIPALI ===
+document.getElementById('sonar-fab').onclick = function() {
+  document.getElementById('sonar-chat').style.display = 'block';
+  this.style.display = 'none';
+  // ✅ TRACKING: Widget aperto
+  trackWidgetEvent('widget_opened');
+};
+document.querySelector('#sonar-chat .close-chat').onclick = function() {
+  document.getElementById('sonar-chat').style.display = 'none';
+  document.getElementById('sonar-fab').style.display = 'flex';
+  // ✅ TRACKING: Widget chiuso
+  trackWidgetEvent('widget_closed');
+};
 async function askSonar(model = "sonar-pro") {
-  if (!$('sonar-q') || !$('sonar-reply')) return;
-  const question = $('sonar-q').value.trim();
+  const question = document.getElementById('sonar-q').value.trim();
   if (!question) return;
-  $('sonar-reply').innerText = '⏳ Loading...';
-
-  const storeId = '29517085';
-  const token = 'public_AzqkPnjmEbKiDr3bSWKeC1YrrNh1BfBY';
-  const apiURL = `https://app.ecwid.com/api/v3/${storeId}/products?keyword=${encodeURIComponent(question)}&token=${token}`;
-
-  let replyType = "";
-  let productLink = "";
-  let productName = "";
-  let searchUrl = `https://errandboy.store/products/search?keyword=${encodeURIComponent(question)}`;
-
-  try {
-    const res = await fetch(apiURL, { method: 'GET' });
-    const data = await res.json();
-    if (data.total === 1) {
-      productLink = data.items[0].url;
-      productName = data.items[0].name;
-      replyType = "product";
-    } else if (data.total > 1) {
-      replyType = "multi";
-    }
-  } catch (e) {}
-
-  let prompt = "";
-  if (replyType === "product") {
-    prompt = `
-You are Errand Boy Malta's shopping assistant. Always reply ONLY in the user's language.
-The customer searched for: "${question}".
-There is EXACTLY ONE matching product.
-Give a clear confirmation and provide ONLY the clickable product link: <a href="${productLink}" target="_blank" style="color:#1a0dab; text-decoration:underline;">${productName}</a>.
-Never show citations or references like [1] or [2]. Only clear text and the link.
-    `;
-  } else {
-    prompt = `
-You are Errand Boy Malta's shopping assistant. Always reply ONLY in the user's language.
-The customer searched for: "${question}".
-Provide this clickable link, always, so they can see the real search results: <a href="${searchUrl}" target="_blank" style="color:#1a0dab; text-decoration:underline;">See all products for "${question}"</a>.
-If the user reports zero results or is unhappy, encourage them to contact support via <a href="https://wa.me/35677082474" target="_blank" style="color:#1a0dab; text-decoration:underline;">WhatsApp</a> or <a href="tel:+35677082474" style="color:#1a0dab; text-decoration:underline;">+35677082474</a>.
-Never show citations or references like [1] or [2]. Only clear text and the link.
-    `;
-  }
-  await callSonarAndShow(question, prompt);
-}
-
-// === Chiamata AI + output in chat ===
-async function callSonarAndShow(userQuestion, contextPrompt) {
-  if (!$('sonar-reply')) return;
-  $('sonar-reply').innerText = '⏳ AI is replying...';
+  // ✅ TRACKING: Messaggio inviato
+  trackWidgetEvent('message_sent', { length: question.length });
+  document.getElementById('sonar-reply').innerText = '⏳ The AI is responding... Please wait.';
+  const prompt = `
+You are Errand Boy Malta's official shopping assistant.
+Always respond in the same language as the customer's question using "we", "our", "us".
+If the customer mentions a specific product name, do NOT provide a link; instead, politely say:
+"Please use the search icon located at the top right of the page to type your product name."
+For questions about how a product works, or about our store location, opening hours, and contact info, answer directly and clearly.
+Do not provide links that open in new windows.
+Answer ONLY questions related to Errand Boy Malta products and services.
+If the question is outside this scope, politely say: "Sorry, I can only help you with Errand Boy Malta products and info."
+Never use references or citations like [1],[1].
+`;
+  const userPrompt = `${prompt}\nUser question: ${question}`;
   try {
     const res = await fetch("https://restless-salad-b1bf.wild-darkness-f8cd.workers.dev/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "sonar-pro",
-        messages: [
-          { role: "system", content: contextPrompt },
-          { role: "user", content: userQuestion }
-        ]
+        model: model,
+        messages: [{ role: "user", content: userPrompt }]
       })
     });
-    if (res.ok) {
-      const data = await res.json();
-      let reply = data.choices?.[0]?.message?.content || '';
-      $('sonar-reply').innerHTML = reply;
-      if ($('sonar-chat')) $('sonar-chat').scrollTop = $('sonar-chat').scrollHeight;
-      return;
+    if (!res.ok) {
+      if (model === 'sonar-pro') return askSonar('sonar');
+      throw new Error('API error: ' + res.status);
     }
-    throw new Error('AI error');
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content || 'No reply or error.';
+    document.getElementById('sonar-reply').innerText = reply;
+    // Scroll chat in basso per vedere nuova risposta e input
+    const chatBox = document.getElementById('sonar-chat');
+    chatBox.scrollTop = chatBox.scrollHeight;
   } catch (e) {
-    $('sonar-reply').innerText = 'Chat temporarily unavailable. Try later.';
+    document.getElementById('sonar-reply').innerText = 'Chat temporarily unavailable (' + e.message + '). Try later.';
   }
 }
-
-// === TRACKING EVENTI WIDGET (opzionale) ===
+document.getElementById('sonar-send-btn').onclick = function() {
+  askSonar();
+};
+document.getElementById('sonar-q').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') askSonar();
+});
+// === TRACKING EVENTI WIDGET AI SONAR ===
 function trackWidgetEvent(eventName, eventData = {}) {
-  if (
-    typeof window.trackWidgetOpen === 'function' ||
-    typeof window.trackWidgetMessage === 'function' ||
-    typeof window.trackWidgetClose === 'function'
-  ) {
-    switch (eventName) {
-      case 'widget_opened':
-        if (window.trackWidgetOpen) window.trackWidgetOpen();
-        break;
-      case 'message_sent':
-        if (window.trackWidgetMessage) window.trackWidgetMessage(eventData.length || 0);
-        break;
-      case 'widget_closed':
-        if (window.trackWidgetClose) window.trackWidgetClose();
-        break;
+    // Verifica se le funzioni di tracking sono disponibili (caricate da Ecwid)
+    if (typeof window.trackWidgetOpen === 'function' || 
+        typeof window.trackWidgetMessage === 'function' || 
+        typeof window.trackWidgetClose === 'function') {
+        
+        switch(eventName) {
+            case 'widget_opened':
+                if (window.trackWidgetOpen) window.trackWidgetOpen();
+                break;
+            case 'message_sent':
+                if (window.trackWidgetMessage) window.trackWidgetMessage(eventData.length || 0);
+                break;
+            case 'widget_closed':
+                if (window.trackWidgetClose) window.trackWidgetClose();
+                break;
+        }
     }
-  }
-  console.log('🎯 Widget Event:', eventName, eventData);
+    
+    // Log per debug (visibile nella console del browser)
+    console.log('🎯 Widget Event:', eventName, eventData);
 }
