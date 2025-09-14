@@ -19,31 +19,20 @@ document.addEventListener('DOMContentLoaded', function() {
     trackWidgetEvent('message_sent', { length: question.length });
     document.getElementById('sonar-reply').innerText = '⏳ The AI is responding... Please wait.';
 
-    // Ricerca correlata: wine bottle -> wine cooler
-    let relatedLink = '';
-    let relatedPhrase = '';
-    const normalizedQuestion = question.trim().toLowerCase();
-
-    if(normalizedQuestion.includes('wine bottle')) {
-      relatedLink = '<a href="https://errandboy.store/products/search?keyword=wine%20cooler" target="_blank" style="color:#1a0dab; text-decoration:underline;">Vedi tutti i wine cooler</a>';
-      relatedPhrase = 'Stai forse cercando un wine cooler? Questo è il link dei wine cooler:';
-    }
-
     const searchUrl = "https://errandboy.store/products/search?keyword=" + encodeURIComponent(question);
 
     const customPrompt = `
-You are Errand Boy Malta's official shopping assistant.
-Never include any references, citations, or brackets like [1], [2], etc.
-If a user searches for "wine bottle" or another product that is NOT sold on our shop, but we offer a related item (for example: "wine cooler"), do NOT describe the wine bottle—just respond:
-"Stai forse cercando un wine cooler? Questo è il link dei wine cooler:"
-and provide this clickable link:
-<a href="https://errandboy.store/products/search?keyword=wine%20cooler" target="_blank" style="color:#1a0dab; text-decoration:underline;">Vedi tutti i wine cooler</a>
-If the user searches for a product or category you actually have, give a very brief description (no more than 2 sentences) and always show the product link for their query:
+You are Errand Boy Malta's shopping assistant.
+Always answer ONLY about products and services available on our website.
+If there are any products or categories matching the user's keywords ("${question}"), respond briefly and ALWAYS show this clickable blue link:
 <a href="${searchUrl}" target="_blank" style="color:#1a0dab; text-decoration:underline;">Vedi tutti i prodotti per "${question}"</a>
-Never write long technical paragraphs about products the shop does NOT sell; just recommend related items from Errand Boy Malta, with a concise, shop-focused style.
-If the search is unrelated, reply: "Sorry, I can only help with Errand Boy Malta products and info."
-If there are no matching or related products, reply politely and invite the user to contact via <a href="https://wa.me/35677082474" target="_blank" style="color:#1a0dab; text-decoration:underline;">WhatsApp</a> or <a href="tel:+35677082474" style="color:#1a0dab; text-decoration:underline;">+35677082474</a>.
-Never say or suggest "use the search icon"; always offer the clickable link.
+Do NOT provide long product explanations or extra details. Just a short sentence and the link.
+If there are NO results for that search, respond kindly inviting the customer to:
+- Use the search icon in the top-right corner of the site.
+- Browse main product categories in the menu.
+- Or contact us by SMS or WhatsApp at <a href="https://wa.me/35677082474" target="_blank" style="color:#1a0dab; text-decoration:underline;">+35677082474</a>
+Never say you don’t know, never include references or technical content. Never use lists in your answer.
+All replies must be concise and in a friendly, helpful shop style.
 `;
 
     try {
@@ -65,17 +54,11 @@ Never say or suggest "use the search icon"; always offer the clickable link.
       }
       var data = await res.json();
 
-      // VERSIONE COMPATIBILE (NO '?.' MODERNO)
       var reply = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content)
         ? data.choices[0].message.content
         : 'No reply or error.';
 
-      // Se domanda "wine bottle", forziamo output sintetico e correlato
-      if (normalizedQuestion.includes('wine bottle')) {
-        document.getElementById('sonar-reply').innerHTML = relatedPhrase + "<br>" + relatedLink;
-      } else {
-        document.getElementById('sonar-reply').innerHTML = reply;
-      }
+      document.getElementById('sonar-reply').innerHTML = reply;
 
       var chatBox = document.getElementById('sonar-chat');
       if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
