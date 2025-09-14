@@ -16,10 +16,9 @@ document.querySelector('#sonar-chat .close-chat').onclick = function() {
 async function askSonar(model = "sonar-pro") {
   const question = document.getElementById('sonar-q').value.trim();
   if (!question) return;
-  
+
   // ✅ TRACKING: Messaggio inviato
   trackWidgetEvent('message_sent', { length: question.length });
-  
   document.getElementById('sonar-reply').innerText = '⏳ The AI is responding... Please wait.';
 
   const prompt = `
@@ -32,10 +31,14 @@ Do not provide links that open in new windows.
 Answer ONLY questions related to Errand Boy Malta products and services.
 If the question is outside this scope, politely say: "Sorry, I can only help you with Errand Boy Malta products and info."
 Never use references or citations like [1],[1].
+
+If the customer asks about a specific product type or category (for example: 'ceramic bakeware'):
+- If only one product matches, reply with the direct link to that product.
+- If more than one product matches, reply ONLY with the link to the category page where all those products are listed, not separate links.
+Search and link only to current products available in the errandboy.store website.
 `;
 
   const userPrompt = `${prompt}\nUser question: ${question}`;
-
   try {
     const res = await fetch("https://restless-salad-b1bf.wild-darkness-f8cd.workers.dev/", {
       method: "POST",
@@ -52,7 +55,6 @@ Never use references or citations like [1],[1].
     const data = await res.json();
     const reply = data.choices?.[0]?.message?.content || 'No reply or error.';
     document.getElementById('sonar-reply').innerText = reply;
-
     // Scroll chat in basso per vedere nuova risposta e input
     const chatBox = document.getElementById('sonar-chat');
     chatBox.scrollTop = chatBox.scrollHeight;
