@@ -32,7 +32,6 @@ async function getProductLinkOrCategory(keyword) {
   const apiURL = `https://app.ecwid.com/api/v3/${storeId}/products?keyword=${encodeURIComponent(keyword)}&token=${token}`;
   const res = await fetch(apiURL, { method: 'GET' });
   const data = await res.json();
-
   if (data.total === 1) {
     const item = data.items[0];
     return {
@@ -90,7 +89,6 @@ async function askSonar(model = "sonar-pro") {
         ${fonte} ${infoOnline}
       `;
     }
-
   } else if (result.type === 'category') {
     reply = `
       <b>Abbiamo trovato diversi articoli per la tua ricerca:</b><br>
@@ -140,8 +138,4 @@ function trackWidgetEvent(eventName, eventData = {}) {
     }
   }
   console.log('🎯 Widget Event:', eventName, eventData);
-}
-    
-    // Log per debug (visibile nella console del browser)
-    console.log('🎯 Widget Event:', eventName, eventData);
 }
