@@ -1,9 +1,8 @@
-// === WIDGET SONAR AI MULTILINGUA — LINK SEARCH SEMPRE PRESENTE ===
+// === WIDGET SONAR AI MULTILINGUA — LINK SEARCH SEMPRE VISIBILE, FUNZIONA OVUNQUE ===
 
-function $(id) {
-  return document.getElementById(id);
-}
+function $(id) { return document.getElementById(id); }
 
+// Pulsante flottante apertura
 if ($('sonar-fab')) {
   $('sonar-fab').onclick = function() {
     if ($('sonar-chat')) $('sonar-chat').style.display = 'block';
@@ -12,6 +11,7 @@ if ($('sonar-fab')) {
   };
 }
 
+// Tasto chiusura chat
 if (document.querySelector('#sonar-chat .close-chat')) {
   document.querySelector('#sonar-chat .close-chat').onclick = function() {
     if ($('sonar-chat')) $('sonar-chat').style.display = 'none';
@@ -38,7 +38,6 @@ async function askSonar(model = "sonar-pro") {
   try {
     const res = await fetch(apiURL, { method: 'GET' });
     const data = await res.json();
-
     if (data.total === 1) {
       productLink = data.items[0].url;
       productName = data.items[0].name;
@@ -47,7 +46,7 @@ async function askSonar(model = "sonar-pro") {
       replyType = "multi";
     }
   } catch (e) {
-    // fallback
+    // fallback: replyType resta ""
   }
 
   let prompt = "";
@@ -57,15 +56,16 @@ async function askSonar(model = "sonar-pro") {
 You are Errand Boy Malta's shopping assistant. Always reply ONLY in the user's language.
 The customer searched for: "${question}".
 There is EXACTLY ONE matching product.
-Give a clear confirmation and provide ONLY the clickable product link: <a href="${productLink}" target="_blank">${productName}</a>.
-Optionally, if helpful, you may add info from the web after the link.
+Give a clear confirmation and provide ONLY the clickable product link: <a href="${productLink}" target="_blank" style="color:#1a0dab; text-decoration:underline;">${productName}</a>.
+Never show citations or references like [1] or [2]. Only clear text and the link.
     `;
   } else {
     prompt = `
 You are Errand Boy Malta's shopping assistant. Always reply ONLY in the user's language.
 The customer searched for: "${question}".
-Show a clear reply and ALWAYS include this clickable link: <a href="${searchUrl}" target="_blank">See all products for "${question}"</a>.
-If nothing is found, invite them to contact support via <a href="https://wa.me/35677082474" target="_blank">WhatsApp</a> or <a href="tel:+35677082474">+35677082474</a>.
+Provide this clickable link, always, so they can see the real search results: <a href="${searchUrl}" target="_blank" style="color:#1a0dab; text-decoration:underline;">See all products for "${question}"</a>.
+If the user reports zero results or is unhappy, encourage them to contact support via <a href="https://wa.me/35677082474" target="_blank" style="color:#1a0dab; text-decoration:underline;">WhatsApp</a> or <a href="tel:+35677082474" style="color:#1a0dab; text-decoration:underline;">+35677082474</a>.
+Never show citations or references like [1] or [2]. Only clear text and the link.
     `;
   }
 
@@ -100,17 +100,21 @@ async function callSonarAndShow(userQuestion, contextPrompt) {
   }
 }
 
+// Pulsante "Send"
 if ($('sonar-send-btn')) {
   $('sonar-send-btn').onclick = function() {
     askSonar();
   };
 }
+
+// Invio tramite Enter
 if ($('sonar-q')) {
   $('sonar-q').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') askSonar();
   });
 }
 
+// Tracking eventi widget
 function trackWidgetEvent(eventName, eventData = {}) {
   if (
     typeof window.trackWidgetOpen === 'function' ||
